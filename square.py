@@ -46,9 +46,11 @@ def square():
         twist_msg = Twist()
         twist_msg.linear.x = 0.1
         twist_msg.angular.z = 0.0
+
         rospy.loginfo(twist_msg)
         pub.publish(twist_msg)
         print('length' + str(i))
+        
         while(True):
             if ((abs(odom_x - last_x) >= length) or (abs(odom_y - last_y) >= length)):
                 break    
