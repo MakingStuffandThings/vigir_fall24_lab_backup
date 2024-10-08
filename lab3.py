@@ -2,15 +2,21 @@
 import rospy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry 
-import Numpy
+import numpy
 
 import math
 from  tf.transformations import euler_from_quaternion
 
 goals=4
 length=0.5
+k=0.1
+m=0.08
 
-goal_coords=[(0,2,math.pi/2),(0,0,math.pi),(1,0,((math.pi)/2)*3),(1,2,0)]
+
+goal_coords=[(1,0.51,90),(-1,0.5,180),(-1,-0.5,270),(1,-0.5,0)]
+
+
+source_coords=[(0,0,0),(1,0.5,math.pi/2),(-1,0.5,math.pi),(-1,-0.5,((math.pi)/2)*3),(1,-0.5,0)]
 
 
 def callback(data):
@@ -38,128 +44,125 @@ def deltaTheta(z):
     return abs(O_z-z)
 
 
-#step 1, create ro, alpha, beta
-# step 2, using those, construct a homogenous matrix
-#[cos(theta) -sin(theta) 0    delta(x)    ]
-#[sin(theta)  cos(theta) 0    delta(y)    ]
-#[0           0          1    delta(theta)]
-#[0           0          0    1           ]
+#Todo: algorithm
+       
+#
+#step:1
+#
+# #construct matrix dHs
+# [cos(dtheta) -sin(dtheta) 0 dx]
+# [sin(dtheta)  cos(dtheta) 0 dy]
+# [0            0           1  0]
+# [0            0           0  1] 
 
-#save this matrix as a variable when calculating the first time
-#after this multiply this matrix by
-#[0]
-#[0]
-#[0]
-#[1]
-#hardocode the D[]S matrix with desired values
 
-#[cos(-90) -sin(-90)   0    -2   ]   [0]
-#[sin(-90)  cos(-90)   0     1   ] * [0]
-#[0         0          1     0   ]   [0]
-#[0         0          0     1   ]   [1]
-#this this will give us the first Velocity=v and Rotation=w to get where you need to go
-#
-#use matrix [v] = [Kp 0   0  ]*[p] where K is some speed value that we apply as a global set speed multiplier
-#           [w]   [0  Ka  Kb ] [a]
-#                              [b]
-#[p]
-#[a] are given from somewhere idk anymore man
-#[b]
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
+#construct cHs
+# where c= abs(odom_curent-odom_last)
+# [cos(ctheta) -sin(ctheta) 0   cx]
+# [sin(ctheta)  cos(ctheta) 0   cy]
+# [0            0           1   0 ]
+# [0            0           0   1 ]
+
+
+#construct dHc by multiplying dHs * (cHs)^-1
+
+#extract x y z from dHc, convert to spherical coords
+#use matrix 
+
+# where k is some modifier set by us
+# [ u ] = [Kp 0 0 ] *[p]
+# [ w ]   [0 Ka Kb]  [a]
+#                    [b]
+#publish u as linear.x and w as angular.z,
+#using while(dest-current>tolerance)
+def calc_gain_matrix(p,a,b):
+    input_vector=numpy.array([p,a,b])
+
+    gain_matrix=numpy.array([[k*p,0,0],
+                            [0,m*a,k*b]])
+    robot_vals=numpy.dot(gain_matrix,input_vector)
+    print(robot_vals)
+    return robot_vals
 
 
 
+def cartesian_to_spherical(x, y, z):
+    # Calculate the radial distance
+    r = math.sqrt(x**2 + y**2 + z**2)
+    
+    # Calculate the azimuthal angle (theta)
+    theta = math.atan2(y, x)
+    
+    # Calculate the polar angle (phi)
+    phi = math.atan2(math.sqrt(x**2 + y**2), z)
+    
+    return r, theta, phi
+def build_transform (x,y,theta):
 
+    cos = math.cos (math.radians(theta))
+    sin = math.sin (math.radians(theta))
+    cos = round (cos, 1)
 
+    m1 = numpy.array([[cos,-sin,0,x],[sin,cos,0,y],[0,0,1,0],[0,0,0,1]])
 
+    print (m1)
+    return m1
 
-
-def calc_p(x,y):
-    return math.sqrt( pow(deltaX(x),2) + pow(deltaY(y))   )
-
-def calc_alpha(theta,x,y):
-    return (theta*-1)+Numpy.atan2(deltaY(y),deltaX(x))
-def calc_w(theta):
-    return theta
-def calc_b():
-
-
-
-
-
-
-
-
-
+def source_minus_odom(x,y,theta):
+    return (abs(x-odom_x),abs(y-odom_y),abs(theta-O_z))
 
 def program():
+  
     pub = rospy.Publisher('/cmd_vel', Twist, queue_size = 1)
     rospy.sleep(2)
     i = 0
 
-    while(i < goals):
-        i = i + 1
-        last_x = odom_x
-        last_y = odom_y
-        last_O_z = O_z
-        twist_msg = Twist()
+    #while(i < goals):
 
-        #hello, this is a comment
+    i = i + 1
+    last_x=odom_x
+    last_y=odom_y
+    last_theta=O_z
+    twist_msg = Twist()
+    p_a_b=[10,10,10]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    while(p_a_b[0]>=0.5):
+        dHs=build_transform(goal_coords[i][0],goal_coords[i][1],goal_coords[i][2])
+        #dHs=build_transform(1,1,90)
+        c_val=source_minus_odom(source_coords[i][0],source_coords[i][1],source_coords[i][2])
+        print("Values from odom-source",c_val)
+        cHs=build_transform(c_val[0],c_val[1],c_val[2])
+        #cHs=build_transform(0,0,0)
+        cHs_inv = numpy.linalg.inv(cHs)
+        dHc=numpy.dot(dHs,cHs_inv)
+        column_4 = dHc[0:3, 3]
+        column_4_matrix = column_4.reshape(3, 1)
+    
 
 
+        print(dHc)
+        print("\n\n",column_4_matrix)
 
+        p_a_b=cartesian_to_spherical(column_4_matrix[0],column_4_matrix[1],column_4_matrix[2])
+        print(p_a_b)
+
+        u_w=calc_gain_matrix(p_a_b[0],p_a_b[1],p_a_b[2],0.1)
+        twist_msg.linear.x = u_w[0]
+        twist_msg.angular.z = u_w[1]
+        rospy.loginfo(twist_msg)
+        pub.publish(twist_msg)
+        rospy.sleep(1)
+        
+    twist_msg.linear.x = 0
+    twist_msg.angular.z = 0
+    rospy.loginfo(twist_msg)
+    pub.publish(twist_msg)
+
+
+
+
+      
+        #hello, this is a comment, 
 
     ''' 
         #linear
@@ -185,8 +188,7 @@ def program():
             if not (abs(O_z-last_O_z) <= ((math.pi)*2)/sides):
                 break
     '''
-                
-    twist_msg.linear.x = 0
+       
     twist_msg.angular.z = 0
     rospy.loginfo(twist_msg)
     pub.publish(twist_msg)
@@ -194,9 +196,12 @@ def program():
 
 if __name__ == '__main__':
     try:
+        i=0
         odom()
         rospy.sleep(1)
         program()
+       
+        # calc_gain_matrix(1,2,3,1)
     except rospy.ROSInterruptException:
         print('exception')
         pass
