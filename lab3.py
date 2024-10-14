@@ -11,7 +11,7 @@ goals=4
 length=0.5
 
 
-goal_coords=[(1,0.50,90),(-1,0.5,180),(-1,-0.5,270),(1,-0.5,0)]
+goal_coords=[(-0.5,1,-90),(-1,0.5,180),(-1,-0.5,270),(1,-0.5,0)]
 
 
 source_coords=[(0,0,0),(1,0.5,math.pi/2),(-1,0.5,math.pi),(-1,-0.5,((math.pi)/2)*3),(1,-0.5,0)]
@@ -22,26 +22,18 @@ def callback(data):
     location = data.pose.pose
     odom_x = location.position.x
     odom_y = location.position.y
-    '''quaternion = [location.orientation.x,
+    quaternion = [location.orientation.x,
                 location.orientation.y, 
                 location.orientation.z, 
                 location.orientation.w]
     e = euler_from_quaternion(quaternion)
-    O_z = e[2]'''
+    O_z = e[2]
     O_z=location.orientation.z
                 
 
 def odom():
     rospy.init_node('odom', anonymous = True)
     rospy.Subscriber('/odom',Odometry, callback)
-
-def deltaX(x):
-    return abs(odom_x-x)
-def deltaY(y):
-    return abs(odom_y-y)
-def deltaTheta(z):
-    return abs(O_z-z)
-
 
 #Todo: algorithm
        
@@ -74,9 +66,9 @@ def deltaTheta(z):
 #                    [b]
 #publish u as linear.x and w as angular.z,
 #using while(dest-current>tolerance)
-kp=0.09
-ka=0.2
-kb=-0.3
+kp=0 #0.09
+ka=0.1
+kb=-0.2
 def calc_gain_matrix(p,a,b):
     input_vector=numpy.array([p,a,b])
 
@@ -90,9 +82,11 @@ def calc_gain_matrix(p,a,b):
 
 def cartesian_to_polar(x, y, t):
     #calculate r
-    r = math.sqrt(x**2 + y**2)
+    r = math.sqrt(math.pow(x,2) + math.pow(y,2))
     #calculate alpha
-    alpha = -t+math.atan2(y, x)
+    print("The value from atan2(y,x)=",math.degrees(math.atan2(y,x)),"The theta=",math.degrees(t))
+    alpha = (-t)+(math.atan2(y, x))
+    
     #calcualte beta
     beta=-(t+alpha)
     
@@ -113,7 +107,7 @@ def source_minus_odom(x,y,theta):
 
 def program():
   
-    pub = rospy.Publisher('/cmd_vel', Twist, queue_size = 100)
+    pub = rospy.Publisher('/cmd_vel', Twist, queue_size = 1)
     rate = rospy.Rate(10)
     rospy.sleep(2)
     i = 0
@@ -127,12 +121,13 @@ def program():
     twist_msg = Twist()
     p_a_b=[10,10,10]
 
-    while(p_a_b[0]>=0.05):
+    while(p_a_b[0]>=0.01):
         print("dest coords are \n",goal_coords[0],"\n")
+        print("dhs is")
         dHs=build_transform(goal_coords[i][0],goal_coords[i][1],goal_coords[i][2])
         #dHs=build_transform(1,1,90)
         c_val=source_minus_odom(source_coords[i][0],source_coords[i][1],source_coords[i][2])
-        print("Values from odom are x=",odom_x," y=",odom_y," theta=",O_z,"\n")
+        print("Values from odom are x=",odom_x," y=",odom_y," theta=",math.degrees(O_z),"\n")
         print("Values from odom-source",c_val)
         
         cHs=build_transform(c_val[0],c_val[1],c_val[2])
@@ -146,21 +141,32 @@ def program():
         
 
 
-    
-
+       
 
         print(dHc)
-        print("\n\n",column_4_matrix)
         theta=math.atan2(dHc[1][0],dHc[0][0])
+        print("X wrt dHc",column_4_matrix[0],"Y wrt dHc",column_4_matrix[1],"Theta wrt dHc",math.degrees(theta))
         p_a_b=cartesian_to_polar(column_4_matrix[0],column_4_matrix[1],theta)
-        print(p_a_b)
+        print("p=",p_a_b[0],"a=",math.degrees(p_a_b[1]),"b=",math.degrees(p_a_b[2]))
+        
         
 
         u_w=calc_gain_matrix(p_a_b[0],p_a_b[1],p_a_b[2])
+        
+        print("Command velocity and theta are: ",u_w)
+        print("\n\n\n\n\n")
+        #rospy.sleep(0.5)
+        twist_msg.linear.x = 0
+        twist_msg.angular.z = 0
+        pub.publish(twist_msg)
+        
+        #input("press any key to send to robot")
         twist_msg.linear.x = u_w[0]
         twist_msg.angular.z = u_w[1]
         rospy.loginfo(twist_msg)
         pub.publish(twist_msg)
+        
+
 
 
 
