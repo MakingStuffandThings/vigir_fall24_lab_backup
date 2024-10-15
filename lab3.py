@@ -28,14 +28,14 @@ def callback(data):
                 location.orientation.w]
     e = euler_from_quaternion(quaternion)
     O_z = e[2]
-    O_z=location.orientation.z
+    #O_z=location.orientation.z
                 
 
 def odom():
     rospy.init_node('odom', anonymous = True)
     rospy.Subscriber('/odom',Odometry, callback)
 
-#Todo: algorithm
+#Todo: debug alpha not shrinking as angle gets corrected
        
 #
 #step:1
@@ -67,8 +67,8 @@ def odom():
 #publish u as linear.x and w as angular.z,
 #using while(dest-current>tolerance)
 kp=0 #0.09
-ka=0.1
-kb=-0.2
+ka=0.2
+kb=-0.1
 def calc_gain_matrix(p,a,b):
     input_vector=numpy.array([p,a,b])
 
@@ -95,7 +95,7 @@ def build_transform (x,y,theta):
 
     cos = math.cos (math.radians(theta))
     sin = math.sin (math.radians(theta))
-    cos = round (cos, 1)
+    #cos = round (cos, 1)
 
     m1 = numpy.array([[cos,-sin,0,x],[sin,cos,0,y],[0,0,1,0],[0,0,0,1]])
 
@@ -103,7 +103,7 @@ def build_transform (x,y,theta):
     return m1
 
 def source_minus_odom(x,y,theta):
-    return (odom_x-x,odom_y-y,O_z-theta)
+    return (x-odom_x,y-odom_y,theta-O_z)
 
 def program():
   
@@ -127,14 +127,14 @@ def program():
         dHs=build_transform(goal_coords[i][0],goal_coords[i][1],goal_coords[i][2])
         #dHs=build_transform(1,1,90)
         c_val=source_minus_odom(source_coords[i][0],source_coords[i][1],source_coords[i][2])
-        print("Values from odom are x=",odom_x," y=",odom_y," theta=",math.degrees(O_z),"\n")
+        print("Values from odom are x=",odom_x," y=",odom_y," theta(radians)=",O_z,"\n")
         print("Values from odom-source",c_val)
         
         cHs=build_transform(c_val[0],c_val[1],c_val[2])
-        #cHs=build_transform(0,0,0)
-        cHs_inv = numpy.linalg.inv(cHs)
+        #cHs=build_transform(odom_x,odom_y,O_z)
+        cHs_inv =cHs #numpy.linalg.inv(cHs)
         print("dHc is \n")
-        dHc=numpy.matmul(cHs_inv,dHs)
+        dHc=numpy.matmul(dHs,cHs_inv)
         column_4 = dHc[0:3, 3]
         column_4_matrix = column_4.reshape(3, 1)
         rate.sleep()
@@ -144,8 +144,8 @@ def program():
        
 
         print(dHc)
-        theta=math.atan2(dHc[1][0],dHc[0][0])
-        print("X wrt dHc",column_4_matrix[0],"Y wrt dHc",column_4_matrix[1],"Theta wrt dHc",math.degrees(theta))
+        theta=O_z#math.atan2(dHc[1][0],dHc[0][0])
+        print("X wrt dHc",column_4_matrix[0],"Y wrt dHc",column_4_matrix[1],"Theta wrt dHc",theta)
         p_a_b=cartesian_to_polar(column_4_matrix[0],column_4_matrix[1],theta)
         print("p=",p_a_b[0],"a=",math.degrees(p_a_b[1]),"b=",math.degrees(p_a_b[2]))
         
@@ -155,12 +155,12 @@ def program():
         
         print("Command velocity and theta are: ",u_w)
         print("\n\n\n\n\n")
-        #rospy.sleep(0.5)
+        rospy.sleep(0.5)
         twist_msg.linear.x = 0
         twist_msg.angular.z = 0
         pub.publish(twist_msg)
         
-        #input("press any key to send to robot")
+        input("press any key to send to robot")
         twist_msg.linear.x = u_w[0]
         twist_msg.angular.z = u_w[1]
         rospy.loginfo(twist_msg)
