@@ -122,18 +122,18 @@ def program():
     p_a_b=[10,10,10]
 
     while(p_a_b[0]>=0.01):
-        print("dest coords are \n",goal_coords[0],"\n")
-        print("dhs is")
+        #print("dest coords are \n",goal_coords[0],"\n")
+        #print("dhs is")
         dHs=build_transform(goal_coords[i][0],goal_coords[i][1],goal_coords[i][2])
         #dHs=build_transform(1,1,90)
         c_val=source_minus_odom(source_coords[i][0],source_coords[i][1],source_coords[i][2])
-        print("Values from odom are x=",odom_x," y=",odom_y," theta(radians)=",O_z,"\n")
-        print("Values from odom-source",c_val)
+        #print("Values from odom are x=",odom_x," y=",odom_y," theta(radians)=",O_z,"\n")
+        #print("Values from odom-source",c_val)
         
         cHs=build_transform(c_val[0],c_val[1],c_val[2])
         #cHs=build_transform(odom_x,odom_y,O_z)
         cHs_inv =cHs #numpy.linalg.inv(cHs)
-        print("dHc is \n")
+        #print("dHc is \n")
         dHc=numpy.matmul(dHs,cHs_inv)
         column_4 = dHc[0:3, 3]
         column_4_matrix = column_4.reshape(3, 1)
@@ -145,12 +145,10 @@ def program():
 
         print(dHc)
         theta=O_z#math.atan2(dHc[1][0],dHc[0][0])
-        print("X wrt dHc",column_4_matrix[0],"Y wrt dHc",column_4_matrix[1],"Theta wrt dHc",theta)
+        #print("X wrt dHc",column_4_matrix[0],"Y wrt dHc",column_4_matrix[1],"Theta wrt dHc",theta)
         p_a_b=cartesian_to_polar(column_4_matrix[0],column_4_matrix[1],theta)
         print("p=",p_a_b[0],"a=",math.degrees(p_a_b[1]),"b=",math.degrees(p_a_b[2]))
         
-        
-
         u_w=calc_gain_matrix(p_a_b[0],p_a_b[1],p_a_b[2])
         
         print("Command velocity and theta are: ",u_w)
@@ -184,35 +182,7 @@ def program():
 
 
       
-        #hello, this is a comment, 
-
-    ''' 
-        #linear
-    
-        twist_msg.linear.x = 0.1
-        twist_msg.angular.z = 0.0
-        rospy.loginfo(twist_msg)
-        pub.publish(twist_msg)
-        print('length' + str(i))
-        while(True):
-            if ((abs(odom_x - last_x) >= length) or (abs(odom_y - last_y) >= length)):
-                break    
-            
         
-        #angular
-        twist_msg.linear.x = 0
-        print("\n\n",column_4_matrix)
-
-        p_a_b=cartesian_to_spherical(column_4_matrix[0],column_4_matrix[1],column_4_matrix[
-        twist_msg.angular.z = 0.1
-        rospy.loginfo(twist_msg)
-        pub.publish(twist_msg)
-        print('turn' + str(i))
-
-        while(True):
-            if not (abs(O_z-last_O_z) <= ((math.pi)*2)/sides):
-                break
-    '''
        
     twist_msg.angular.z = 0
     rospy.loginfo(twist_msg)
