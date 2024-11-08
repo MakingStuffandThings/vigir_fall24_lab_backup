@@ -1,0 +1,10 @@
+Useful commands and links
+
+website http://vigir.ee.missouri.edu/~gdesouza/ece4340/index.htm
+
+
+
+
+Puma stuff
+Minicom
+minicom -D /dev/ttyUSB0
