@@ -2,7 +2,9 @@ Useful commands and links
 
 website http://vigir.ee.missouri.edu/~gdesouza/ece4340/index.htm
 
-
+Matlab:
+cd into higher dir
+ usr/local/MATLAB/R2024a/bin/    ./matlab
 
 
 Puma stuff
