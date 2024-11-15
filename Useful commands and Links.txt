@@ -10,3 +10,6 @@ cd into higher dir
 Puma stuff
 Minicom
 minicom -D /dev/ttyUSB0
+
+Dr. Desouzas phone#
+573-529-3820
