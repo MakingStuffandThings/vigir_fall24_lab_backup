@@ -1,6 +1,7 @@
 close all
-system('fswebcam -r 800x600 /dev/video2 cl_items_1.jpg');
-system('fswebcam -r 800x600 /dev/video0 cr_items_1.jpg');
+clear 
+system('fswebcam -d /dev/video2 -r 800x600 --skip 20 --set sharpness=1 --set "Focus, Auto"=False --set "Focus (absolute)"=100 --no-banner --jpeg 95 cl_items_1.jpg ');
+system('fswebcam -d /dev/video0 -r 800x600 --skip 20 --set sharpness=1 --set "Focus, Auto"=False --set "Focus (absolute)"=100 --no-banner --jpeg 95 cr_items_1.jpg ');
 TableLeft = read_image("cl_items_1.jpg");
 disp(TableLeft);
 
@@ -38,8 +39,25 @@ eRightStereo = eRight * eLeft;
 eRightStereo = eRightStereo(1:3, :);
 pRight = KK_right * eRightStereo;
 
-[x, y, z] = undistor_real_coords(pLeft, pRight, uLeft, vLeft, uRight, vRight);
+[X,Y,Z] = undistor_real_coords(pLeft, pRight, uLeft, vLeft, uRight, vRight);
 
-disp(x);
-disp(y);
-disp(z);
+XYZ=[X,Y,Z,1];
+
+
+Avg_orient=((TableRight.Orientation + TableLeft.Orientation)/2);
+disp("Average Orientation=");
+disp(Avg_orient);
+disp(XYZ(1));
+disp(XYZ(2));
+disp(XYZ(3));
+
+XYZ=covert_xyz(XYZ.')
+XY=XYZ;
+XY(3)=0
+
+move_robot(XY,Avg_orient)
+system('openGripper')
+move_robot(XYZ,Avg_orient)
+pause(10)
+system('closeGripper')
+move_robot(XY,0);
