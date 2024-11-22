@@ -1,0 +1,3 @@
+For robot, use OAT 90 90 (angle that best grabs chess piece. 0-180 is good)
+
+
