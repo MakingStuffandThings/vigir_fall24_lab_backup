@@ -14,3 +14,11 @@ minicom -D /dev/ttyUSB0
 
 Dr. Desouzas phone#
 573-529-3820
+
+Camera stuff:
+Display video
+ffplay /dev/video2 or 0
+
+
+take photo
+fswebcam -d /dev/video0 -r 800x600 --skip 20 --set sharpness=1 --set "Focus, Auto"=False --set "Focus (absolute)"=100 --no-banner --jpeg 95 "filename".jpg
